@@ -1,4 +1,6 @@
 import numpy as np
+import scipy.special
+import itertools
 from scipy.special import binom
 from scipy.integrate import odeint
 
@@ -15,98 +17,39 @@ def library_size(n, poly_order, use_sine=False, include_constant=True):
 
 
 def sindy_library(X, poly_order, include_sine=False):
-    m,n = X.shape
+    m, n = X.shape
     l = library_size(n, poly_order, include_sine, True)
-    library = np.ones((m,l))
+    library = np.ones((m, l))
     index = 1
 
-    for i in range(n):
-        library[:,index] = X[:,i]
-        index += 1
-
-    if poly_order > 1:
-        for i in range(n):
-            for j in range(i,n):
-                library[:,index] = X[:,i]*X[:,j]
-                index += 1
-
-    if poly_order > 2:
-        for i in range(n):
-            for j in range(i,n):
-                for k in range(j,n):
-                    library[:,index] = X[:,i]*X[:,j]*X[:,k]
-                    index += 1
-
-    if poly_order > 3:
-        for i in range(n):
-            for j in range(i,n):
-                for k in range(j,n):
-                    for q in range(k,n):
-                        library[:,index] = X[:,i]*X[:,j]*X[:,k]*X[:,q]
-                        index += 1
-                    
-    if poly_order > 4:
-        for i in range(n):
-            for j in range(i,n):
-                for k in range(j,n):
-                    for q in range(k,n):
-                        for r in range(q,n):
-                            library[:,index] = X[:,i]*X[:,j]*X[:,k]*X[:,q]*X[:,r]
-                            index += 1
+    for order in range(1, poly_order + 1):
+        for combo in itertools.combinations_with_replacement(range(n), order):
+            library[:, index] = np.prod(X[:, combo], axis=1)
+            index += 1
 
     if include_sine:
         for i in range(n):
-            library[:,index] = np.sin(X[:,i])
+            library[:, index] = np.sin(X[:, i])
             index += 1
 
     return library
 
 
 def sindy_library_order2(X, dX, poly_order, include_sine=False):
-    m,n = X.shape
+    m, n = X.shape
     l = library_size(2*n, poly_order, include_sine, True)
-    library = np.ones((m,l))
+    library = np.ones((m, l))
     index = 1
-
     X_combined = np.concatenate((X, dX), axis=1)
 
-    for i in range(2*n):
-        library[:,index] = X_combined[:,i]
-        index += 1
-
-    if poly_order > 1:
-        for i in range(2*n):
-            for j in range(i,2*n):
-                library[:,index] = X_combined[:,i]*X_combined[:,j]
-                index += 1
-
-    if poly_order > 2:
-        for i in range(2*n):
-            for j in range(i,2*n):
-                for k in range(j,2*n):
-                    library[:,index] = X_combined[:,i]*X_combined[:,j]*X_combined[:,k]
-                    index += 1
-
-    if poly_order > 3:
-        for i in range(2*n):
-            for j in range(i,2*n):
-                for k in range(j,2*n):
-                    for q in range(k,2*n):
-                        library[:,index] = X_combined[:,i]*X_combined[:,j]*X_combined[:,k]*X_combined[:,q]
-                        index += 1
-                    
-    if poly_order > 4:
-        for i in range(2*n):
-            for j in range(i,2*n):
-                for k in range(j,2*n):
-                    for q in range(k,2*n):
-                        for r in range(q,2*n):
-                            library[:,index] = X_combined[:,i]*X_combined[:,j]*X_combined[:,k]*X_combined[:,q]*X_combined[:,r]
-                            index += 1
+    for order in range(1, poly_order + 1):
+        for combo in itertools.combinations_with_replacement(range(2*n), order):
+            library[:, index] = np.prod(X_combined[:, combo], axis=1)
+            index += 1
 
     if include_sine:
         for i in range(2*n):
-            library[:,index] = np.sin(X_combined[:,i])
+            library[:, index] = np.sin(X_combined[:, i])
             index += 1
 
     return library

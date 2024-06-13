@@ -45,7 +45,7 @@ def train_network(training_data, val_data, params):
             train_dict = prepare_data(training_data, params, device, idxs=batch_idxs)
             # print("train_dict", train_dict['x'][0])
             x_batch, dx_batch, ddx_batch = train_dict['x'], train_dict['dx'], train_dict.get('ddx')
-            coefficient_mask = train_dict.get('coefficient_mask')
+            # coefficient_mask = train_dict.get('coefficient_mask')
 
             # x_batch, dx_batch, ddx_batch = train_dict['x'], train_dict['dx'], train_dict.get('ddx')
             
@@ -71,7 +71,6 @@ def train_network(training_data, val_data, params):
             validation_data['coefficient_mask'] = params['coefficient_mask']
             sindy_model_terms.append(torch.sum(params['coefficient_mask']).cpu().numpy())
             # print('THRESHOLDING: %d active coefficients' % np.sum(params['coefficient_mask']))
-            print('THRESHOLDING: %d active coefficients' % torch.sum(params['coefficient_mask']))
 
     print('REFINEMENT')
     for epoch in range(params['refinement_epochs']):
@@ -83,16 +82,19 @@ def train_network(training_data, val_data, params):
             # coefficient_mask = train_dict.get('coefficient_mask')
 
             optimizer.zero_grad()
-            # outputs = model(x_batch, dx_batch, ddx_batch)
-           #  loss, losses, _ = define_loss(outputs, params)
             loss, losses, _ = model.define_loss(x_batch, dx_batch, ddx_batch, params)
             loss.backward()
             optimizer.step()
 
         if params['print_progress'] and (epoch % params['print_frequency'] == 0):
-            # model.eval()
+
             with torch.no_grad():
                 validation_losses.append(print_progress(model, epoch, params, x_norm, sindy_predict_norm_x, validation_data,train_dict))
+
+    # print(params['coefficient_mask'])
+    # for key in model.state_dict():
+    #     print(key)
+    #     print(model.state_dict()['coefficient_mask'])
 
     torch.save(model.state_dict(), params['data_path'] + params['save_name']+  '.pth')
     with open(params['data_path'] + params['save_name'] + '_params.pkl', 'wb') as f:

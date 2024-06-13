@@ -18,7 +18,8 @@ class FullNetwork(nn.Module):
 
         # self.sindy_coefficients = nn.Parameter(torch.randn(self.library_dim, self.latent_dim))
         # self.coefficient_mask = nn.Parameter(torch.ones(self.library_dim, self.latent_dim), requires_grad=False)
-        self.coefficient_mask =params['coefficient_mask']
+        #self.coefficient_mask =params['coefficient_mask']
+        self.coefficient_mask = torch.nn.Parameter(torch.ones(self.library_dim, self.latent_dim), requires_grad=False)
 
                 # Initialize sindy_coefficients based on the parameter
         if params['coefficient_initialization'] == 'xavier':
@@ -43,7 +44,9 @@ class FullNetwork(nn.Module):
         # Handle sequential thresholding if needed
         self.sequential_thresholding = params.get('sequential_thresholding', False)
         if self.sequential_thresholding:
-            self.coefficient_mask = torch.nn.Parameter(torch.ones(self.library_dim, self.latent_dim), requires_grad=False)
+            print("Sequential thresholding is enabled")
+            self.coefficient_mask = torch.nn.Parameter(params['coefficient_mask'], requires_grad=False)
+
 
     def build_autoencoder(self, params, is_encoder):
         layers = []
@@ -85,27 +88,27 @@ class FullNetwork(nn.Module):
             raise ValueError('Invalid activation function')
 
     def sindy_library(self, z):
-        library = [torch.ones(z.size(0), 1, device=z.device)]
+        library = [torch.ones(z.size(0)).to(z.device)]
         for i in range(self.latent_dim):
-            library.append(z[:, i:i+1])
+            library.append(z[:,i])
 
         if self.poly_order > 1:
             for i in range(self.latent_dim):
                 for j in range(i, self.latent_dim):
-                    library.append(z[:, i:i+1] * z[:, j:j+1])
+                    library.append(z[:,i] * z[:,j])
 
         if self.poly_order > 2:
             for i in range(self.latent_dim):
                 for j in range(i, self.latent_dim):
                     for k in range(j, self.latent_dim):
-                        library.append(z[:, i:i+1] * z[:, j:j+1] * z[:, k:k+1])
+                        library.append(z[:,i] * z[:,j] * z[:,k])
 
         if self.poly_order > 3:
             for i in range(self.latent_dim):
                 for j in range(i, self.latent_dim):
                     for k in range(j, self.latent_dim):
                         for p in range(k, self.latent_dim):
-                            library.append(z[:, i:i+1] * z[:, j:j+1] * z[:, k:k+1] * z[:, p:p+1])
+                            library.append(z[:,i] * z[:,j] * z[:,k] * z[:,p])
 
         if self.poly_order > 4:
             for i in range(self.latent_dim):
@@ -113,13 +116,17 @@ class FullNetwork(nn.Module):
                     for k in range(j, self.latent_dim):
                         for p in range(k, self.latent_dim):
                             for q in range(p, self.latent_dim):
-                                library.append(z[:, i:i+1] * z[:, j:j+1] * z[:, k:k+1] * z[:, p:p+1] * z[:, q:q+1])
+                                library.append(z[:,i] * z[:,j] * z[:,k] * z[:,p] * z[:,q])
 
         if self.include_sine:
-            for i in range(self.bfloat16latent_dim):
+            for i in range(self.latent_dim):
                 library.append(torch.sin(z[:,i]))
 
-        return torch.cat(library, dim=1)
+        # print(torch.stack(library, dim=1).shape)
+        # print("cat")
+        # print(torch.cat(library, dim=1).shape)
+
+        return torch.stack(library, dim=1).to(z.device)
         
     def sindy_library_order2(self, z, dz):
         """
@@ -251,6 +258,7 @@ class FullNetwork(nn.Module):
             losses['sindy_z'] = F.mse_loss(ddz, sindy_predict)
             losses['sindy_x'] = F.mse_loss(ddx_decode, ddx)
 
+        self.coefficient_mask = torch.nn.Parameter(params['coefficient_mask'], requires_grad=False)
         # sindy_coefficients = network_output[4] * params['coefficient_mask']
         # Move sindy_coefficients to CPU for numpy operations
         sindy_coefficients_cpu = sindy_coefficients.cpu()
