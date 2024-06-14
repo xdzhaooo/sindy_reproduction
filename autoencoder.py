@@ -20,6 +20,7 @@ class FullNetwork(nn.Module):
         # self.coefficient_mask = nn.Parameter(torch.ones(self.library_dim, self.latent_dim), requires_grad=False)
         #self.coefficient_mask =params['coefficient_mask']
         self.coefficient_mask = torch.nn.Parameter(torch.ones(self.library_dim, self.latent_dim), requires_grad=False)
+        
 
                 # Initialize sindy_coefficients based on the parameter
         if params['coefficient_initialization'] == 'xavier':
@@ -45,7 +46,7 @@ class FullNetwork(nn.Module):
         self.sequential_thresholding = params.get('sequential_thresholding', False)
         if self.sequential_thresholding:
             print("Sequential thresholding is enabled")
-            self.coefficient_mask = torch.nn.Parameter(params['coefficient_mask'], requires_grad=False)
+            self.coefficient_mask = torch.nn.Parameter(torch.tensor(params['coefficient_mask'],dtype=bool), requires_grad=False)
 
 
     def build_autoencoder(self, params, is_encoder):
